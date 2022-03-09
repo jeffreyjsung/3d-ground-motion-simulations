@@ -1,0 +1,112 @@
+<?xml version='1.0' encoding='utf-8'?>
+<q:quakeml xmlns:q="http://quakeml.org/xmlns/quakeml/1.2" xmlns="http://quakeml.org/xmlns/bed/1.2" xmlns:catalog="http://anss.org/xmlns/catalog/0.1">
+  <eventParameters publicID="quakeml:nc.anss.org/Event/NC/72948801#164678405776">
+    <creationInfo>
+      <agencyID>NC</agencyID>
+      <creationTime>2022-03-09T00:00:57.760000Z</creationTime>
+    </creationInfo>
+    <event publicID="quakeml:nc.anss.org/Event/NC/72948801" catalog:datasource="nc" catalog:dataid="nc72948801" catalog:eventsource="nc" catalog:eventid="72948801">
+      <preferredOriginID>quakeml:nc.anss.org/Origin/NC/12219564</preferredOriginID>
+      <preferredMagnitudeID>quakeml:nc.anss.org/Netmag/NC/5270364</preferredMagnitudeID>
+      <type>earthquake</type>
+      <creationInfo>
+        <agencyID>NC</agencyID>
+        <creationTime>2018-01-04T20:03:40.000000Z</creationTime>
+        <version>15</version>
+      </creationInfo>
+      <origin publicID="quakeml:nc.anss.org/Origin/NC/12219564" catalog:datasource="nc" catalog:dataid="nc72948801" catalog:eventsource="nc" catalog:eventid="72948801">
+        <time>
+          <value>2018-01-04T10:39:37.730000Z</value>
+        </time>
+        <latitude>
+          <value>37.8551667</value>
+        </latitude>
+        <longitude>
+          <value>-122.2568333</value>
+        </longitude>
+        <depth>
+          <value>12310.0</value>
+          <uncertainty>200.0</uncertainty>
+        </depth>
+        <depthType>from location</depthType>
+        <timeFixed>false</timeFixed>
+        <epicenterFixed>false</epicenterFixed>
+        <methodID>smi:nc.anss.org/origin/HYP2000_m2g</methodID>
+        <type>hypocenter</type>
+        <evaluationMode>manual</evaluationMode>
+        <evaluationStatus>final</evaluationStatus>
+        <creationInfo>
+          <agencyID>NC</agencyID>
+          <creationTime>2018-01-04T20:03:40.000000Z</creationTime>
+        </creationInfo>
+        <originUncertainty>
+          <preferredDescription>confidence ellipsoid</preferredDescription>
+          <horizontalUncertainty>110.0</horizontalUncertainty>
+          <confidenceLevel>95.0</confidenceLevel>
+          <confidenceEllipsoid>
+            <semiMajorAxisLength>480.0</semiMajorAxisLength>
+            <semiMinorAxisLength>192.0</semiMinorAxisLength>
+            <semiIntermediateAxisLength>264.0</semiIntermediateAxisLength>
+            <majorAxisPlunge>80.0</majorAxisPlunge>
+            <majorAxisAzimuth>343.0</majorAxisAzimuth>
+            <majorAxisRotation>62.0</majorAxisRotation>
+          </confidenceEllipsoid>
+        </originUncertainty>
+      </origin>
+      <origin publicID="quakeml:nc.anss.org/Origin/NC/2487706" catalog:datasource="nc" catalog:dataid="nc72948801" catalog:eventsource="nc" catalog:eventid="72948801">
+        <time>
+          <value>2018-01-04T10:39:37.640000Z</value>
+        </time>
+        <latitude>
+          <value>37.8608322</value>
+        </latitude>
+        <longitude>
+          <value>-122.2421646</value>
+        </longitude>
+        <depth>
+          <value>12970.0</value>
+          <uncertainty>270.0</uncertainty>
+        </depth>
+        <depthType>from location</depthType>
+        <timeFixed>false</timeFixed>
+        <epicenterFixed>false</epicenterFixed>
+        <methodID>smi:nc.anss.org/origin/BINDER_m2g</methodID>
+        <type>hypocenter</type>
+        <evaluationMode>manual</evaluationMode>
+        <evaluationStatus>reviewed</evaluationStatus>
+        <creationInfo>
+          <agencyID>NC</agencyID>
+          <creationTime>2018-01-04T10:43:26.000000Z</creationTime>
+        </creationInfo>
+        <originUncertainty>
+          <preferredDescription>confidence ellipsoid</preferredDescription>
+          <horizontalUncertainty>150.0</horizontalUncertainty>
+          <confidenceLevel>95.0</confidenceLevel>
+          <confidenceEllipsoid>
+            <semiMajorAxisLength>672.0</semiMajorAxisLength>
+            <semiMinorAxisLength>264.0</semiMinorAxisLength>
+            <semiIntermediateAxisLength>360.0</semiIntermediateAxisLength>
+            <majorAxisPlunge>79.0</majorAxisPlunge>
+            <majorAxisAzimuth>10.0</majorAxisAzimuth>
+            <majorAxisRotation>29.0</majorAxisRotation>
+          </confidenceEllipsoid>
+        </originUncertainty>
+      </origin>
+      <magnitude publicID="quakeml:nc.anss.org/Netmag/NC/5270364">
+        <mag>
+          <value>4.38</value>
+        </mag>
+        <type>Mw</type>
+        <originID>quakeml:nc.anss.org/Origin/NC/2487706</originID>
+        <methodID>smi:nc.anss.org/magnitude/TMTS</methodID>
+        <stationCount>7</stationCount>
+        <evaluationMode>manual</evaluationMode>
+        <evaluationStatus>reviewed</evaluationStatus>
+        <creationInfo>
+          <agencyID>NC</agencyID>
+          <creationTime>2018-01-04T10:58:19.000000Z</creationTime>
+        </creationInfo>
+      </magnitude>
+    </event>
+  </eventParameters>
+</q:quakeml>
