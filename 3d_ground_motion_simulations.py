@@ -670,9 +670,9 @@ def create_3d_df(directory, file_list, bandpass, bp_range):
     return df_3d_bp
 
 
-df_3d_bp = create_3d_df(directory, file_list, True, [0, 0.5])
+df_3d_bp = create_3d_df(directory, file_list, True, [0.2, 0.5])
 
-df_3d_bp1 = create_3d_df(directory, file_list, True, [0, 0.5])
+df_3d_bp1 = create_3d_df(directory, file_list, True, [0.5, 1])
 
 fig1 = px.scatter_mapbox(df_3d_bp, lat='lat', lon='lon', color='Peak', hover_name='Station', 
                          mapbox_style='stamen-terrain', color_continuous_scale = 
@@ -699,7 +699,5 @@ fig2.add_scattermapbox(lat=[37.86119], lon=[-122.24233],
                      showlegend = False
                      )
 fig2.show()
-
-create_3d_df(directory, file_list, False, [0, 0.5])
 
 
