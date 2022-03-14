@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 import plotly.express as px
 from geopy import distance
 
-# cleaning and putting all the seismic data into a DataFrame
+# cleaning and putting all the sw4 seismic data into a DataFrame
 # .BH is removed (they are duplicate sensors)
 directory = "./sw4_test_output/"
 file_list = os.listdir(directory)
@@ -34,6 +34,15 @@ df = pd.DataFrame(data=file_list)
 df.columns = ['Point']
 # station location data
 locations = pd.read_csv('sw4_station.txt', delimiter = ",")
+
+# observed data
+obs_directory = "./obs_test_output/"
+obs_file_list = os.listdir(obs_directory)
+obs_file_list.sort()
+obs_file_list = [x for x in obs_file_list if ".xml" not in x and ".sacpz" not in x]
+assert((len(obs_file_list) / 3) - int(len(obs_file_list) / 3) == 0)
+obs_df = pd.DataFrame(data=obs_file_list)
+obs_df.columns = ['Point']
 
 # peak and duration data for each point
 absolute_peaks = []
@@ -66,6 +75,38 @@ for i in range(len(file_list)):
         plt.axvline(x=time[end], color='r')
         tr.spectrogram()        
 
+# peak and duration data for each observed point
+obs_absolute_peaks = []
+obs_durations = []
+obs_amplitudes = []
+obs_times = []
+for i in range(len(obs_file_list)):
+    st = read(obs_directory+obs_file_list[i])
+    tr = st[0]
+    # tr.filter('bandpass', freqmin=0.2, freqmax=0.5, corners=2, zerophase=True)
+    abs_data = abs(tr.data)
+    time = tr.times()
+    start = np.argmax(abs_data>0.00004)
+    data_flipped = np.flip(abs_data)
+    end = len(abs_data) - np.argmax(data_flipped>0.00004) - 1
+    duration = time[end-1] - time[start]
+    obs_absolute_peaks.append(abs(max(tr.data, key=abs)))
+    obs_durations.append(duration)
+    obs_amplitudes.append(tr.data)
+    obs_times.append(tr.times())
+    
+    # test single point
+    # set name of data point to name
+    name = "BK.BRK.HN.u"
+    if obs_file_list[i] == name:
+        print('peak: ', abs(max(tr.data, key=abs)))
+        print('duration: ', [time[start], time[end]])
+        plt.plot(time, tr.data)
+        plt.axvline(x=time[start], color='r')
+        plt.axvline(x=time[end], color='r')
+        plt.xlim((0,200))
+        tr.spectrogram()        
+
 # full dataframe
 df["Station"] = [x[:-5] for x in df["Point"]]
 df["Amplitudes"] = amplitudes
@@ -77,6 +118,18 @@ df_with_locations = df_with_locations.drop(columns=['net.sta'])
 source = (37.86119, -122.24233)
 df_with_locations['Distance (miles)'] = df_with_locations.apply(lambda row: distance.distance((row.lat, row.lon), source).miles, axis=1)
 df_with_locations
+
+# obs dataframe
+obs_df["Station"] = [x[:-5] for x in obs_df["Point"]]
+obs_df["Amplitudes"] = obs_amplitudes
+obs_df["Times"] = obs_times
+obs_df["Absolute Peak"] = obs_absolute_peaks
+obs_df["Duration"] = obs_durations
+obs_df = pd.merge(obs_df, locations, left_on='Station', right_on='net.sta')
+obs_df = obs_df.drop(columns=['net.sta'])
+source = (37.86119, -122.24233)
+obs_df['Distance (miles)'] = obs_df.apply(lambda row: distance.distance((row.lat, row.lon), source).miles, axis=1)
+obs_df
 
 # # Visualizing Peaks and Duration for Each Direction
 
