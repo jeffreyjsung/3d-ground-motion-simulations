@@ -583,7 +583,7 @@ df_with_locations_e = df_with_locations[df_with_locations.Point.str.contains('.e
 df_with_locations_e.plot(x = 'Distance (miles)', y = 'Frequency', kind = 'scatter', ylabel = 'Frequency (Hz)', xlabel = 'Distance (miles)', title = "e - Frequency of Peak Amplitude vs Distance")
 fig_e = px.scatter_mapbox(df_with_locations_e, lat='lat', lon='lon', color='Frequency', hover_name='Station', 
                          mapbox_style='stamen-terrain', color_continuous_scale = 
-                        [(0, "blue"), (0.25, "green"), (0.5, "yellow"), (1, "red")], 
+                        'rainbow', 
                          title="Frequency Value of Peak Amplitude at Each Individual Station (East-West)")
 fig_e.update_traces(marker={'size': 8})
 fig_e.add_scattermapbox(lat=[37.86119], lon=[-122.24233], 
@@ -597,7 +597,7 @@ fig_e.show();
 df_with_locations_n.plot(x = 'Distance (miles)', y = 'Frequency', kind = 'scatter', ylabel = 'Frequency (Hz)', xlabel = 'Distance (miles)', title = "n - Frequency of Peak Amplitude vs Distance", color="r")
 fig_n = px.scatter_mapbox(df_with_locations_n, lat='lat', lon='lon', color='Frequency', hover_name='Station', 
                          mapbox_style='stamen-terrain', color_continuous_scale = 
-                        [(0, "blue"), (0.25, "green"), (0.5, "yellow"), (1, "red")], 
+                        'rainbow', 
                          title="Frequency Value of Peak Amplitude at Each Individual Station (North-South)")
 fig_n.update_traces(marker={'size': 8})
 fig_n.add_scattermapbox(lat=[37.86119], lon=[-122.24233], 
@@ -611,7 +611,7 @@ fig_n.show()
 df_with_locations_u.plot(x = 'Distance (miles)', y = 'Frequency', kind = 'scatter', ylabel = 'Frequency (Hz)', xlabel = 'Distance (miles)', title = "u - Frequency of Peak Amplitude vs Distance", color="g")
 fig_u = px.scatter_mapbox(df_with_locations_u, lat='lat', lon='lon', color='Frequency', hover_name='Station', 
                          mapbox_style='stamen-terrain', color_continuous_scale = 
-                        [(0, "blue"), (0.25, "green"), (0.5, "yellow"), (1, "red")], 
+                        'rainbow', 
                          title="Frequency Value of Peak Amplitude at Each Individual Station (Up-Down)")
 fig_u.update_traces(marker={'size': 8})
 fig_u.add_scattermapbox(lat=[37.86119], lon=[-122.24233], 
@@ -622,110 +622,57 @@ fig_u.add_scattermapbox(lat=[37.86119], lon=[-122.24233],
                      )
 fig_u.show()
 
-# +
-# creating 3D Vector Data
-magnitudes = []
-durations = []
-peaks = []
-for i in range(0, len(file_list), 3):
-    st = read(directory+file_list[i])
-    tr_e = st[0]
-    tr_e.filter('bandpass', freqmin=0.2, freqmax=0.5, corners=2, zerophase=True)
-    x = tr_e.data
-    st = read(directory+file_list[i+1])
-    tr_n = st[0]
-    tr_n.filter('bandpass', freqmin=0.2, freqmax=0.5, corners=2, zerophase=True)
-    y = tr_n.data
-    st = read(directory+file_list[i+2])
-    tr_u = st[0]
-    tr_u.filter('bandpass', freqmin=0.2, freqmax=0.5, corners=2, zerophase=True)
-    z = tr_u.data
-    mag = np.sqrt(x**2 + y**2 + z**2)
-    start = np.argmax(mag>0.00004)
-    mag_flipped = np.flip(mag)
-    end = len(mag) - np.argmax(mag_flipped>0.00004) - 1
-    time = tr_u.times()
-    peak = max(mag)
-    duration = time[end] - time[start]
-    durations.append(duration)
-    magnitudes.append(mag)
-    peaks.append(peak)
-    
-    # test single point
-    # set name of data point to name
-    name = "BK.BKS.HN"
-    if file_list[i][:-2] == name:
-        print(file_list[i][:-2])
-        plt.plot(time, mag)
-        plt.axvline(x=time[start], color='r')
-        plt.axvline(x=time[end], color='r')
-        print('duration: ', [time[start], time[end]])
-        
-# new DataFrame for band-passed 3D Data
-new_points = file_list[::3]
-new_points = [x[:-2] for x in new_points]
-df_3d_bp = pd.DataFrame(data=new_points)
-df_3d_bp.columns = ['Point']
-df_3d_bp["Station"] = [x[:-3] for x in df_3d_bp["Point"]]
-df_3d_bp["Magnitudes"] = magnitudes
-df_3d_bp["Peak"] = peaks
-df_3d_bp["Duration"] = durations
-df_3d_bp = pd.merge(df_3d_bp, locations, left_on='Station', right_on='net.sta')
-df_3d_bp = df_3d_bp.drop(columns=['net.sta'])
-df_3d_bp = df_3d_bp.drop_duplicates(subset = ["Station"])
 
-# +
-# creating 3D Vector Data
-magnitudes = []
-durations = []
-peaks = []
-for i in range(0, len(file_list), 3):
-    st = read(directory+file_list[i])
-    tr_e = st[0]
-    tr_e.filter('bandpass', freqmin=0.5, freqmax=1, corners=2, zerophase=True)
-    x = tr_e.data
-    st = read(directory+file_list[i+1])
-    tr_n = st[0]
-    tr_n.filter('bandpass', freqmin=0.5, freqmax=1, corners=2, zerophase=True)
-    y = tr_n.data
-    st = read(directory+file_list[i+2])
-    tr_u = st[0]
-    tr_u.filter('bandpass', freqmin=0.5, freqmax=1, corners=2, zerophase=True)
-    z = tr_u.data
-    mag = np.sqrt(x**2 + y**2 + z**2)
-    start = np.argmax(mag>0.00004)
-    mag_flipped = np.flip(mag)
-    end = len(mag) - np.argmax(mag_flipped>0.00004) - 1
-    time = tr_u.times()
-    peak = max(mag)
-    duration = time[end] - time[start]
-    durations.append(duration)
-    magnitudes.append(mag)
-    peaks.append(peak)
-    
-    # test single point
-    # set name of data point to name
-    name = "BK.BKS.HN"
-    if file_list[i][:-2] == name:
-        print(file_list[i][:-2])
-        plt.plot(time, mag)
-        plt.axvline(x=time[start], color='r')
-        plt.axvline(x=time[end], color='r')
-        print('duration: ', [time[start], time[end]])
-        
-# new DataFrame for band-passed 3D Data, high range
-new_points = file_list[::3]
-new_points = [x[:-2] for x in new_points]
-df_3d_bp1 = pd.DataFrame(data=new_points)
-df_3d_bp1.columns = ['Point']
-df_3d_bp1["Station"] = [x[:-3] for x in df_3d_bp1["Point"]]
-df_3d_bp1["Magnitudes"] = magnitudes
-df_3d_bp1["Peak"] = peaks
-df_3d_bp1["Duration"] = durations
-df_3d_bp1 = pd.merge(df_3d_bp1, locations, left_on='Station', right_on='net.sta')
-df_3d_bp1 = df_3d_bp1.drop(columns=['net.sta'])
-df_3d_bp1 = df_3d_bp1.drop_duplicates(subset = ["Station"])
-# -
+#test
+def create_3d_df(directory, file_list, bandpass, bp_range):
+    magnitudes = []
+    durations = []
+    peaks = []
+    for i in range(0, len(file_list), 3):
+        st = read(directory+file_list[i])
+        tr_e = st[0]
+        if bandpass:
+            tr_e.filter('bandpass', freqmin=bp_range[0], freqmax=bp_range[1], corners=2, zerophase=True)
+        x = tr_e.data
+        st = read(directory+file_list[i+1])
+        tr_n = st[0]
+        if bandpass:
+            tr_n.filter('bandpass', freqmin=bp_range[0], freqmax=bp_range[1], corners=2, zerophase=True)
+        y = tr_n.data
+        st = read(directory+file_list[i+2])
+        tr_u = st[0]
+        if bandpass:
+            tr_u.filter('bandpass', freqmin=bp_range[0], freqmax=bp_range[1], corners=2, zerophase=True)
+        z = tr_u.data
+        mag = np.sqrt(x**2 + y**2 + z**2)
+        start = np.argmax(mag>0.00004)
+        mag_flipped = np.flip(mag)
+        end = len(mag) - np.argmax(mag_flipped>0.00004) - 1
+        time = tr_u.times()
+        peak = max(mag)
+        duration = time[end] - time[start]
+        durations.append(duration)
+        magnitudes.append(mag)
+        peaks.append(peak)
+
+    # new DataFrame for band-passed 3D Data
+    new_points = file_list[::3]
+    new_points = [x[:-2] for x in new_points]
+    df_3d_bp = pd.DataFrame(data=new_points)
+    df_3d_bp.columns = ['Point']
+    df_3d_bp["Station"] = [x[:-3] for x in df_3d_bp["Point"]]
+    df_3d_bp["Magnitudes"] = magnitudes
+    df_3d_bp["Peak"] = peaks
+    df_3d_bp["Duration"] = durations
+    df_3d_bp = pd.merge(df_3d_bp, locations, left_on='Station', right_on='net.sta')
+    df_3d_bp = df_3d_bp.drop(columns=['net.sta'])
+    df_3d_bp = df_3d_bp.drop_duplicates(subset = ["Station"])
+    return df_3d_bp
+
+
+df_3d_bp = create_3d_df(directory, file_list, True, [0, 0.5])
+
+df_3d_bp1 = create_3d_df(directory, file_list, True, [0, 0.5])
 
 fig1 = px.scatter_mapbox(df_3d_bp, lat='lat', lon='lon', color='Peak', hover_name='Station', 
                          mapbox_style='stamen-terrain', color_continuous_scale = 
@@ -752,5 +699,7 @@ fig2.add_scattermapbox(lat=[37.86119], lon=[-122.24233],
                      showlegend = False
                      )
 fig2.show()
+
+create_3d_df(directory, file_list, False, [0, 0.5])
 
 
