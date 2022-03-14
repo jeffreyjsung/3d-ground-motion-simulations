@@ -82,7 +82,6 @@ obs_times = []
 for i in range(len(obs_file_list)):
     st = read(obs_directory+obs_file_list[i])
     tr = st[0]
-    # tr.filter('bandpass', freqmin=0.2, freqmax=0.5, corners=2, zerophase=True)
     abs_data = abs(tr.data)
     time = tr.times()
     start = np.argmax(abs_data>0.00004)
@@ -400,6 +399,7 @@ obs_fig1.add_scattermapbox(lat=[37.86119], lon=[-122.24233],
 obs_fig1.show()
 
 # +
+# can rescale to show trends better since data is so drastically different
 fig2 = px.scatter_mapbox(df_3d, lat='lat', lon='lon', color='Duration', mapbox_style='stamen-terrain', hover_name='Station', color_continuous_scale = 
                 'rainbow', range_color=(0, 200), title="{SW4} Duration of Earthquake (Using 3D Vector Data) at Each Individual Station")
 fig2.update_traces(marker={'size': 8})
@@ -436,7 +436,7 @@ df_3d.plot(x = 'Distance (miles)', y = 'Duration', xlabel = 'Distance (miles)', 
 
 obs_df_3d['Distance (miles)'] = obs_df_3d.apply(
     lambda row: distance.distance((row.lat, row.lon), source).miles, axis=1)
-obs_df_3d.plot(x = 'Distance (miles)', y = 'Peak', kind = 'scatter', ylim = (0, 0.006),
+obs_df_3d.plot(x = 'Distance (miles)', y = 'Peak', kind = 'scatter', ylim = (0, 0.01),
                ylabel = 'Peak Magnitude (3D Vector)', xlabel = 'Distance (miles)', 
                title = "{OBSERVED} Peak Magnitude (3D Vector) vs Distance");
 # note - there is one very far outlier at about ~65 miles if you rescale
@@ -455,6 +455,51 @@ from scipy.fft import fft, ifft, fftfreq
 indexed = df_with_locations.set_index('Point')
 T = 0.037679 # delta seems to be the same for all points
 
+point1 = 'BK.BRK.HN.u' # Can visualize whatever points you want
+data1 = indexed.loc[point1]['Amplitudes']
+times1 = indexed.loc[point1]['Times']
+# For Fourier Transform, can do other visualizations
+N = len(data1)
+yf = fft(data1)
+xf = fftfreq(N, T)[:N//2]
+yf = 2.0/N * np.abs(yf[0:N//2])
+plt.plot(xf, yf)
+
+point2 = 'NC.C033.HN.u' # Can visualize whatever point you want to compare
+data2 = indexed.loc[point2]['Amplitudes']
+times2 = indexed.loc[point2]['Times']
+N = len(data2)
+yf = fft(data2)
+xf = fftfreq(N, T)[:N//2]
+yf = 2.0/N * np.abs(yf[0:N//2])
+plt.plot(xf, yf)
+
+plt.grid()
+plt.ylabel("Amplitude")
+plt.xlabel("Frequency (Hz)");
+plt.xlim([0,2.5])
+plt.title(point1 + ', ' + point2);
+
+peak_amp_at = np.argmax(yf)
+frequency = xf[peak_amp_at]
+amp = yf[peak_amp_at]
+point = (frequency, amp)
+# -
+
+plt.plot(times1, data1)
+plt.ylabel("Amplitude")
+plt.xlabel("Time")
+plt.title(point1);
+
+plt.plot(times2, data2, color='orange')
+plt.ylabel("Amplitude")
+plt.xlabel("Time")
+plt.title(point2);
+
+# It seems like NC.C033 really does have a higher peak (it is very extreme at the start). BK.BRK actually has relatively low amplitudes despite being so close to the source, which is interesting. We will know if the model is accurate in simulating this once we have the true data.
+
+# +
+indexed = obs_df.set_index('Point')
 point1 = 'BK.BRK.HN.u' # Can visualize whatever points you want
 data1 = indexed.loc[point1]['Amplitudes']
 times1 = indexed.loc[point1]['Times']
@@ -490,17 +535,18 @@ plt.plot(times1, data1)
 plt.ylabel("Amplitude")
 plt.xlabel("Time")
 plt.title(point1);
+plt.xlim((0, 200));
 
 plt.plot(times2, data2, color='orange')
 plt.ylabel("Amplitude")
 plt.xlabel("Time")
+plt.xlim((0, 200))
 plt.title(point2);
-
-# It seems like NC.C033 really does have a higher peak (it is very extreme at the start). BK.BRK actually has relatively low amplitudes despite being so close to the source, which is interesting. We will know if the model is accurate in simulating this once we have the true data.
 
 # # Frequency Analysis
 
 # +
+indexed = df_with_locations.set_index('Point')
 frequency_table = []
 Corr_Amp = []
 for i in df_with_locations.Point:  
@@ -575,5 +621,136 @@ fig_u.add_scattermapbox(lat=[37.86119], lon=[-122.24233],
                      showlegend = False
                      )
 fig_u.show()
+
+# +
+# creating 3D Vector Data
+magnitudes = []
+durations = []
+peaks = []
+for i in range(0, len(file_list), 3):
+    st = read(directory+file_list[i])
+    tr_e = st[0]
+    tr_e.filter('bandpass', freqmin=0.2, freqmax=0.5, corners=2, zerophase=True)
+    x = tr_e.data
+    st = read(directory+file_list[i+1])
+    tr_n = st[0]
+    tr_n.filter('bandpass', freqmin=0.2, freqmax=0.5, corners=2, zerophase=True)
+    y = tr_n.data
+    st = read(directory+file_list[i+2])
+    tr_u = st[0]
+    tr_u.filter('bandpass', freqmin=0.2, freqmax=0.5, corners=2, zerophase=True)
+    z = tr_u.data
+    mag = np.sqrt(x**2 + y**2 + z**2)
+    start = np.argmax(mag>0.00004)
+    mag_flipped = np.flip(mag)
+    end = len(mag) - np.argmax(mag_flipped>0.00004) - 1
+    time = tr_u.times()
+    peak = max(mag)
+    duration = time[end] - time[start]
+    durations.append(duration)
+    magnitudes.append(mag)
+    peaks.append(peak)
+    
+    # test single point
+    # set name of data point to name
+    name = "BK.BKS.HN"
+    if file_list[i][:-2] == name:
+        print(file_list[i][:-2])
+        plt.plot(time, mag)
+        plt.axvline(x=time[start], color='r')
+        plt.axvline(x=time[end], color='r')
+        print('duration: ', [time[start], time[end]])
+        
+# new DataFrame for band-passed 3D Data
+new_points = file_list[::3]
+new_points = [x[:-2] for x in new_points]
+df_3d_bp = pd.DataFrame(data=new_points)
+df_3d_bp.columns = ['Point']
+df_3d_bp["Station"] = [x[:-3] for x in df_3d_bp["Point"]]
+df_3d_bp["Magnitudes"] = magnitudes
+df_3d_bp["Peak"] = peaks
+df_3d_bp["Duration"] = durations
+df_3d_bp = pd.merge(df_3d_bp, locations, left_on='Station', right_on='net.sta')
+df_3d_bp = df_3d_bp.drop(columns=['net.sta'])
+df_3d_bp = df_3d_bp.drop_duplicates(subset = ["Station"])
+
+# +
+# creating 3D Vector Data
+magnitudes = []
+durations = []
+peaks = []
+for i in range(0, len(file_list), 3):
+    st = read(directory+file_list[i])
+    tr_e = st[0]
+    tr_e.filter('bandpass', freqmin=0.5, freqmax=1, corners=2, zerophase=True)
+    x = tr_e.data
+    st = read(directory+file_list[i+1])
+    tr_n = st[0]
+    tr_n.filter('bandpass', freqmin=0.5, freqmax=1, corners=2, zerophase=True)
+    y = tr_n.data
+    st = read(directory+file_list[i+2])
+    tr_u = st[0]
+    tr_u.filter('bandpass', freqmin=0.5, freqmax=1, corners=2, zerophase=True)
+    z = tr_u.data
+    mag = np.sqrt(x**2 + y**2 + z**2)
+    start = np.argmax(mag>0.00004)
+    mag_flipped = np.flip(mag)
+    end = len(mag) - np.argmax(mag_flipped>0.00004) - 1
+    time = tr_u.times()
+    peak = max(mag)
+    duration = time[end] - time[start]
+    durations.append(duration)
+    magnitudes.append(mag)
+    peaks.append(peak)
+    
+    # test single point
+    # set name of data point to name
+    name = "BK.BKS.HN"
+    if file_list[i][:-2] == name:
+        print(file_list[i][:-2])
+        plt.plot(time, mag)
+        plt.axvline(x=time[start], color='r')
+        plt.axvline(x=time[end], color='r')
+        print('duration: ', [time[start], time[end]])
+        
+# new DataFrame for band-passed 3D Data, high range
+new_points = file_list[::3]
+new_points = [x[:-2] for x in new_points]
+df_3d_bp1 = pd.DataFrame(data=new_points)
+df_3d_bp1.columns = ['Point']
+df_3d_bp1["Station"] = [x[:-3] for x in df_3d_bp1["Point"]]
+df_3d_bp1["Magnitudes"] = magnitudes
+df_3d_bp1["Peak"] = peaks
+df_3d_bp1["Duration"] = durations
+df_3d_bp1 = pd.merge(df_3d_bp1, locations, left_on='Station', right_on='net.sta')
+df_3d_bp1 = df_3d_bp1.drop(columns=['net.sta'])
+df_3d_bp1 = df_3d_bp1.drop_duplicates(subset = ["Station"])
+# -
+
+fig1 = px.scatter_mapbox(df_3d_bp, lat='lat', lon='lon', color='Peak', hover_name='Station', 
+                         mapbox_style='stamen-terrain', color_continuous_scale = 
+                        'rainbow', range_color=(0, 0.002),
+                         title="{SW4} Peak Amplitude (Using Band-Passed [0.2-0.5] 3D Vector Data) at Each Individual Station")
+fig1.update_traces(marker={'size': 8})
+fig1.add_scattermapbox(lat=[37.86119], lon=[-122.24233], 
+                     hovertemplate = 'SOURCE',
+                     marker_size = 15,
+                     marker_color = 'pink',
+                     showlegend = False
+                     )
+fig1.show()
+
+fig2 = px.scatter_mapbox(df_3d_bp1, lat='lat', lon='lon', color='Peak', hover_name='Station', 
+                         mapbox_style='stamen-terrain', color_continuous_scale = 
+                        'rainbow', range_color=(0, 0.002),
+                         title="{SW4} Peak Amplitude (Using Band-Passed [0.5-1.0] 3D Vector Data) at Each Individual Station")
+fig2.update_traces(marker={'size': 8})
+fig2.add_scattermapbox(lat=[37.86119], lon=[-122.24233], 
+                     hovertemplate = 'SOURCE',
+                     marker_size = 15,
+                     marker_color = 'pink',
+                     showlegend = False
+                     )
+fig2.show()
 
 
