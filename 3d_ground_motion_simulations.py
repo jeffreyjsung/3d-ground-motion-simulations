@@ -64,12 +64,12 @@ def create_df(directory):
     for i in range(len(file_list)):
         st = read(directory+file_list[i])
         tr = st[0]
-        #### tr.filter('bandpass', freqmin=0.2, freqmax=0.5, corners=2, zerophase=True)
         abs_data = abs(tr.data)
         time = tr.times()
-        start = np.argmax(abs_data>0.00004)
+        threshold = max(abs_data) * 0.1
+        start = np.argmax(abs_data>threshold)
         data_flipped = np.flip(abs_data)
-        end = len(abs_data) - np.argmax(data_flipped>0.00004) - 1
+        end = len(abs_data) - np.argmax(data_flipped>threshold) - 1
         duration = time[end-1] - time[start]
         absolute_peaks.append(abs(max(tr.data, key=abs)))
         durations.append(duration)
@@ -291,9 +291,10 @@ def create_df_3d(directory, bandpass=False, bp_range=[0, 1]):
         z = tr_u.data
         length = min(len(x), len(y), len(z))
         mag = np.sqrt(x[:length]**2 + y[:length]**2 + z[:length]**2)
-        start = np.argmax(mag>0.00004)
+        threshold = max(mag) * 0.1
+        start = np.argmax(mag>threshold)
         mag_flipped = np.flip(mag)
-        end = len(mag) - np.argmax(mag_flipped>0.00004) - 1
+        end = len(mag) - np.argmax(mag_flipped>threshold) - 1
         time = tr_u.times()
         peak = max(mag)
         duration = time[end] - time[start]
@@ -362,7 +363,6 @@ obs_fig1.add_scattermapbox(lat=[37.86119], lon=[-122.24233],
 obs_fig1.show()
 
 # +
-# can rescale to show trends better since data is so drastically different
 fig2 = px.scatter_mapbox(sw4_df_3d, lat='lat', lon='lon', color='Duration', mapbox_style='stamen-terrain', hover_name='Station', color_continuous_scale = 
                 'rainbow', range_color=(0, 200), title="{SW4} Duration of Earthquake (Using 3D Vector Data) at Each Individual Station")
 fig2.update_traces(marker={'size': 8})
@@ -408,6 +408,7 @@ fig.show()
 # note - there is one very far outlier at about ~65 miles if you rescale
 
 fig = px.scatter(obs_df_3d, x = 'Distance (miles)', y = 'Duration', title = "{OBSERVED} Duration vs Distance", color_discrete_sequence=['red']);
+fig.update_yaxes(range=[0, 120])
 fig.show()
 
 
