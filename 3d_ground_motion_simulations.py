@@ -61,6 +61,7 @@ def create_df(directory):
     durations = []
     amplitudes = []
     times = []
+    deltas = []
     for i in range(len(file_list)):
         st = read(directory+file_list[i])
         tr = st[0]
@@ -75,7 +76,7 @@ def create_df(directory):
         durations.append(duration)
         amplitudes.append(tr.data)
         times.append(tr.times())
-
+        deltas.append(tr.stats['delta'])
         # test single point
         # set name of data point to name
         """
@@ -94,6 +95,7 @@ def create_df(directory):
     df["Times"] = times
     df["Absolute Peak"] = absolute_peaks
     df["Duration"] = durations
+    df["Delta"] = deltas
     df_with_locations = pd.merge(df, locations, left_on='Station', right_on='net.sta')
     df_with_locations = df_with_locations.drop(columns=['net.sta'])
     source = (37.86119, -122.24233)
@@ -436,7 +438,8 @@ def compare(point1, point2):
     df2 = df2.set_index('Point')
     point2 = point2[0]
     
-    T = 0.037679 # delta seems to be the same for all points
+    T1 = df1.loc[point1]['Delta']
+    T2 = df2.loc[point2]['Delta']
 
     data1 = df1.loc[point1]['Amplitudes']
     times1 = df1.loc[point1]['Times']
@@ -458,16 +461,18 @@ def compare(point1, point2):
     # For Fourier Transform, can do other visualizations
     N = len(data1)
     yf = fft(data1)
-    xf = fftfreq(N, T)[:N//2]
+    xf = fftfreq(N, T1)[:N//2]
     yf = 2.0/N * np.abs(yf[0:N//2])
     plt.figure(2)
     plt.plot(xf, yf, label='point1')
+    
     N = len(data2)
     yf = fft(data2)
-    xf = fftfreq(N, T)[:N//2]
+    xf = fftfreq(N, T2)[:N//2]
     yf = 2.0/N * np.abs(yf[0:N//2])
     plt.figure(2)
     plt.plot(xf, yf, label='point2')
+    
     plt.grid()
     plt.ylabel("Amplitude")
     plt.xlabel("Frequency (Hz)");
@@ -492,6 +497,7 @@ frequency_table = []
 Corr_Amp = []
 for i in sw4_df.Point:  
     data = indexed.loc[i]['Amplitudes']
+    T = indexed.loc[i]['Delta']
     N = len(data)
     yf = fft(data)
     xf = fftfreq(N, T)[:N//2]
@@ -521,7 +527,8 @@ sw4_df_n = sw4_df[sw4_df.Point.str.contains('.n')]
 sw4_df_e = sw4_df[sw4_df.Point.str.contains('.e')]
 # -
 
-sw4_df_e.plot(x = 'Distance (miles)', y = 'Frequency', kind = 'scatter', ylabel = 'Frequency (Hz)', xlabel = 'Distance (miles)', title = "e - Frequency of Peak Amplitude vs Distance")
+fig = px.scatter(sw4_df_e, x='Distance (miles)', y='Frequency', hover_data=['Point'])
+fig.show()
 fig_e = px.scatter_mapbox(sw4_df_e, lat='lat', lon='lon', color='Frequency', hover_name='Station', 
                          mapbox_style='stamen-terrain', color_continuous_scale = 
                         'rainbow', 
@@ -535,7 +542,8 @@ fig_e.add_scattermapbox(lat=[37.86119], lon=[-122.24233],
                      )
 fig_e.show();
 
-sw4_df_n.plot(x = 'Distance (miles)', y = 'Frequency', kind = 'scatter', ylabel = 'Frequency (Hz)', xlabel = 'Distance (miles)', title = "n - Frequency of Peak Amplitude vs Distance", color="r")
+fig = px.scatter(sw4_df_n, x='Distance (miles)', y='Frequency', hover_data=['Point'])
+fig.show()
 fig_n = px.scatter_mapbox(sw4_df_n, lat='lat', lon='lon', color='Frequency', hover_name='Station', 
                          mapbox_style='stamen-terrain', color_continuous_scale = 
                         'rainbow', 
@@ -549,7 +557,8 @@ fig_n.add_scattermapbox(lat=[37.86119], lon=[-122.24233],
                      )
 fig_n.show()
 
-sw4_df_u.plot(x = 'Distance (miles)', y = 'Frequency', kind = 'scatter', ylabel = 'Frequency (Hz)', xlabel = 'Distance (miles)', title = "u - Frequency of Peak Amplitude vs Distance", color="g")
+fig = px.scatter(sw4_df_u, x='Distance (miles)', y='Frequency', hover_data=['Point'])
+fig.show()
 fig_u = px.scatter_mapbox(sw4_df_u, lat='lat', lon='lon', color='Frequency', hover_name='Station', 
                          mapbox_style='stamen-terrain', color_continuous_scale = 
                         'rainbow', 
