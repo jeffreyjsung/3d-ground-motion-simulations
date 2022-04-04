@@ -602,5 +602,32 @@ fig2.add_scattermapbox(lat=[37.86119], lon=[-122.24233],
                      )
 fig2.show()
 
-create_df_3d(obs_directory, True, [0.2, 0.5])
+df_obs_band_passed = create_df_3d(obs_directory, True, [0.1, 0.3])
+df_sw4_band_passed = create_df_3d(directory, True, [0.1, 1])
+plot_peak_ratio(df_sw4_band_passed, df_obs_band_passed)
+# 0.1-0.3 Hz
+# .2-.5
+# .4-.8
+# .5-1
+
 # synthetic/ observation
+def plot_peak_ratio(synthetic_table, observed_table):
+    df = observed_table.copy()
+    df['Peak Ratio'] = synthetic_table['Peak'] / observed_table["Peak"]
+    fig2 = px.scatter_mapbox(df, lat='lat', lon='lon', color='Peak Ratio', hover_name='Station', 
+                         mapbox_style='stamen-terrain', color_continuous_scale = 
+                        'rainbow', range_color=(0, 2),
+                         title="{SW4} Peak Amplitude Ratio Between SW4 and Observed 3D Vector Data) at Each Individual Station")
+    fig2.update_traces(marker={'size': 8})
+    fig2.add_scattermapbox(lat=[37.86119], lon=[-122.24233], 
+                     hovertemplate = 'SOURCE',
+                     marker_size = 15,
+                     marker_color = 'pink',
+                     showlegend = False
+                     )
+    fig2.show()
+
+
+plot_peak_ratio(sw4_df_3d, obs_df_3d)
+
+
