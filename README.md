@@ -1,4 +1,4 @@
-# 3d Ground-Motion Simulations of Moderate Earthquakes on the Hayward Fault
+# 3D Ground-Motion Simulations of Moderate Earthquakes on the Hayward Fault
 Berkeley Seismological Laboratory Research Project: Quantifying potential bias of seismic velocity model prediction data to improve accuracy of future simulations.
 
 ## Jupytext
