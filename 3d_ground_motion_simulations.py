@@ -34,7 +34,7 @@ locations = pd.read_csv('sw4_station.txt', delimiter = ",")
 
 # -
 
-def create_df(directory):
+def create_df(directory, bandpass=False, bp_range=[0, 1]):
     """
     Creates pandas DataFrame from seismic data.
     
@@ -65,13 +65,15 @@ def create_df(directory):
     for i in range(len(file_list)):
         st = read(directory+file_list[i])
         tr = st[0]
+        if bandpass:
+            tr.filter('bandpass', freqmin=bp_range[0], freqmax=bp_range[1], corners=2, zerophase=True)
         abs_data = abs(tr.data)
         time = tr.times()
         threshold = max(abs_data) * 0.1
         start = np.argmax(abs_data>threshold)
         data_flipped = np.flip(abs_data)
         end = len(abs_data) - np.argmax(data_flipped>threshold) - 1
-        duration = time[end-1] - time[start]
+        duration = time[end] - time[start]
         absolute_peaks.append(abs(max(tr.data, key=abs)))
         durations.append(duration)
         amplitudes.append(tr.data)
@@ -112,13 +114,22 @@ obs_df
 
 # only .e
 east_west = sw4_df.iloc[::3, :]
-obs_east_west = obs_df.iloc[::3, :]
+obs_east_west = obs_df[obs_df['Point'].str.contains(r'.e')]
+east_west = east_west[east_west['Point'].isin(obs_east_west['Point'])]
+east_west.reset_index(inplace=True, drop=True)
+obs_east_west.reset_index(inplace=True, drop=True)
 # only .n
 north_south = sw4_df.iloc[1::3, :]
-obs_north_south = obs_df.iloc[::3, :]
+obs_east_west = obs_df[obs_df['Point'].str.contains(r'.n')]
+north_south = north_south[north_south['Point'].isin(obs_north_south['Point'])]
+north_south.reset_index(inplace=True, drop=True)
+obs_north_south.reset_index(inplace=True, drop=True)
 # only .u
-up_down = sw4_df.iloc[1::3, :]
-obs_up_down = obs_df.iloc[::3, :]
+up_down = sw4_df.iloc[2::3, :]
+obs_up_down = obs_df[obs_df['Point'].str.contains(r'.u')]
+up_down = up_down[up_down['Point'].isin(obs_up_down['Point'])]
+up_down.reset_index(inplace=True, drop=True)
+obs_up_down.reset_index(inplace=True, drop=True)
 
 # +
 ew = px.scatter_mapbox(east_west, lat='lat', lon='lon', color='Absolute Peak', hover_name='Station', mapbox_style='stamen-terrain', color_continuous_scale = 
@@ -332,6 +343,10 @@ def create_df_3d(directory, bandpass=False, bp_range=[0, 1]):
 sw4_df_3d = create_df_3d(directory)
 
 obs_df_3d = create_df_3d(obs_directory)
+sw4_df_3d = sw4_df_3d[sw4_df_3d['Point'].isin(obs_df_3d['Point'])]
+obs_df_3d = obs_df_3d[obs_df_3d['Point'].isin(sw4_df_3d['Point'])]
+sw4_df_3d.reset_index(inplace=True, drop=True)
+obs_df_3d.reset_index(inplace=True, drop=True)
 
 # +
 fig1 = px.scatter_mapbox(sw4_df_3d, lat='lat', lon='lon', color='Peak', hover_name='Station', 
@@ -416,7 +431,7 @@ fig.show()
 
 # Here we compare NC.C033 and BK.BRK, because from the peak amplitude geographic plot it seems like BK.BRK is a very small value, even though it is about the same distance (very close) to the source. There could be an error in our computation.
 
-def compare(point1, point2):
+def compare(point1, point2, freq_range_displayed=[0, 2.5]):
     """
     Plots out graphs for two different points you want to compare.
     
@@ -454,25 +469,32 @@ def compare(point1, point2):
     plt.xlabel("Time")
     plt.title(point2);
     
+    plt.figure(2)
+    plt.plot(times1, data1)
+    plt.plot(times2, data2, color='orange')
+    plt.ylabel("Amplitude")
+    plt.xlabel("Time")
+    plt.title(point2);
+    
     # For Fourier Transform, can do other visualizations
     N = len(data1)
     yf = fft(data1)
     xf = fftfreq(N, T1)[:N//2]
     yf = 2.0/N * np.abs(yf[0:N//2])
-    plt.figure(2)
+    plt.figure(3)
     plt.plot(xf, yf, label='point1')
     
     N = len(data2)
     yf = fft(data2)
     xf = fftfreq(N, T2)[:N//2]
     yf = 2.0/N * np.abs(yf[0:N//2])
-    plt.figure(2)
+    plt.figure(3)
     plt.plot(xf, yf, label='point2')
     
     plt.grid()
     plt.ylabel("Amplitude")
     plt.xlabel("Frequency (Hz)");
-    plt.xlim([0,2.5])
+    plt.xlim(freq_range_displayed)
     plt.title(point1 + ', ' + point2);
     plt.legend()
 
@@ -482,6 +504,7 @@ compare(['BK.BRK.HN.u', sw4_df], ['NC.C033.HN.u', sw4_df])
 # It seems like NC.C033 really does have a higher peak (it is very extreme at the start). BK.BRK actually has relatively low amplitudes despite being so close to the source, which is interesting. We will know if the model is accurate in simulating this once we have the true data.
 
 compare(['NC.JBR.HN.e', sw4_df], ['NC.JBR.HN.e', obs_df])
+
 
 # Way different even though it is the same point.
 
@@ -599,14 +622,16 @@ fig2.add_scattermapbox(lat=[37.86119], lon=[-122.24233],
 fig2.show()
 
 
+# # Playing with Different Scales
+
 # synthetic/ observation
 def plot_peak_ratio(synthetic_table, observed_table, peak_type='Peak'):
     df = observed_table.copy()
-    df['Peak Ratio'] = synthetic_table[peak_type] / observed_table[peak_type]
+    df['Peak Ratio'] = np.true_divide(synthetic_table[peak_type], observed_table[peak_type])
     fig2 = px.scatter_mapbox(df, lat='lat', lon='lon', color='Peak Ratio', hover_name='Station', 
                          mapbox_style='stamen-terrain', color_continuous_scale = 
                         'rainbow', range_color=(0, 2),
-                         title="{SW4} Peak Amplitude Ratio Between SW4 and Observed 3D Vector Data (synthetic/observed) at Each Individual Station")
+                         title="{SW4} Peak Amplitude Ratio Between SW4 and Observed Data (synthetic/observed) at Each Individual Station")
     fig2.update_traces(marker={'size': 8})
     fig2.add_scattermapbox(lat=[37.86119], lon=[-122.24233], 
                      hovertemplate = 'SOURCE',
@@ -617,8 +642,6 @@ def plot_peak_ratio(synthetic_table, observed_table, peak_type='Peak'):
     fig2.show()
 
 
-# # Playing with Different Scales
-
 sw4_df_3d
 peak_df = sw4_df_3d[["Peak"]]
 new_df = (peak_df-peak_df.min()) / (peak_df.max()-peak_df.min())
@@ -626,9 +649,6 @@ new_df2 = (peak_df-peak_df.mean())/peak_df.std()
 sw4_df_3d['Peak 0-1'] = new_df
 sw4_df_3d['Peak z-score'] = new_df2
 sw4_df_3d
-
-# +
-obs_df_3d = obs_df_3d.drop(obs_df_3d[(obs_df_3d['Station'] == "NP.1745")].index)
 
 peak_df = obs_df_3d[["Peak"]]
 new_df = (peak_df-peak_df.min()) / (peak_df.max()-peak_df.min())
@@ -699,35 +719,67 @@ plot_peak_ratio(sw4_df_3d, obs_df_3d, 'Peak 0-1')
 
 # # Band Pass
 
-df_obs_band_passed = create_df_3d(obs_directory, True, [0.1, 0.3])
-df_sw4_band_passed = create_df_3d(directory, True, [0.1, 0.3])
-plot_peak_ratio(df_sw4_band_passed, df_obs_band_passed)
+df_obs_band_passed = create_df(obs_directory, True, [0.03, 0.25])
+df_sw4_band_passed = create_df(directory, True, [0.03, 0.25])
 # 0.1-0.3 Hz
 # .2-.5
 # .4-.8
 # .5-1
 
-def add_new_columns(df, is_sw4=False):
-    if is_sw4:
-        df = obs_df_3d.drop(obs_df_3d[(obs_df_3d['Station'] == "NP.1745")].index)
 
-    peak_df = df[["Peak"]]
-    new_df = (peak_df-peak_df.min()) / (peak_df.max()-peak_df.min())
-    new_df2 = (peak_df-peak_df.mean())/peak_df.std()
-    df['Peak 0-1'] = new_df
-    df['Peak z-score'] = new_df2
-    return df
-
-
-df_obs_band_passed = add_new_columns(df_obs_band_passed, True)
-df_sw4_band_passed = add_new_columns(df_sw4_band_passed, False)
-df_sw4_band_passed
-
-plot_peak_ratio(df_sw4_band_passed, df_obs_band_passed)
+# only .e
+east_west = df_sw4_band_passed[df_sw4_band_passed['Point'].str.contains(r'.e')]
+obs_east_west = df_obs_band_passed[df_obs_band_passed['Point'].str.contains(r'.e')]
+east_west = east_west[east_west['Point'].isin(obs_east_west['Point'])]
+east_west.reset_index(inplace=True, drop=True)
+obs_east_west.reset_index(inplace=True, drop=True)
+# only .n
+north_south = df_sw4_band_passed[df_sw4_band_passed['Point'].str.contains(r'.n')]
+obs_north_south = df_obs_band_passed[df_obs_band_passed['Point'].str.contains(r'.n')]
+north_south = north_south[north_south['Point'].isin(obs_north_south['Point'])]
+north_south.reset_index(inplace=True, drop=True)
+obs_north_south.reset_index(inplace=True, drop=True)
+# only .u
+up_down = df_sw4_band_passed[df_sw4_band_passed['Point'].str.contains(r'.u')]
+obs_up_down = df_obs_band_passed[df_obs_band_passed['Point'].str.contains(r'.u')]
+up_down = up_down[up_down['Point'].isin(obs_up_down['Point'])]
+up_down.reset_index(inplace=True, drop=True)
+obs_up_down.reset_index(inplace=True, drop=True)
 
 # +
-fig2 = px.scatter_mapbox(df_obs_band_passed, lat='lat', lon='lon', color='Duration', mapbox_style='stamen-terrain', hover_name='Station', color_continuous_scale = 
-                'rainbow', range_color=(0, 200), title="{SW4} Duration of Earthquake (Using 3D Vector Data) at Each Individual Station")
+dff = up_down
+obs_dff = obs_up_down
+
+
+fig1 = px.scatter_mapbox(dff, lat='lat', lon='lon', color='Absolute Peak', hover_name='Station', 
+                         mapbox_style='stamen-terrain', color_continuous_scale = 
+                        'rainbow', range_color=(0, 0.000001 *140),
+                         title="{SW4} Peak Amplitude at Each Individual Station")
+fig1.update_traces(marker={'size': 8})
+fig1.add_scattermapbox(lat=[37.86119], lon=[-122.24233], 
+                     hovertemplate = 'SOURCE',
+                     marker_size = 15,
+                     marker_color = 'pink',
+                     showlegend = False
+                     )
+fig1.show()
+
+obs_fig1 = px.scatter_mapbox(obs_dff, lat='lat', lon='lon', color='Absolute Peak', hover_name='Station', 
+                         mapbox_style='stamen-terrain', color_continuous_scale = 
+                        'rainbow', range_color=(0, 0.000001 *140),
+                         title="{OBSERVED} Peak Amplitude at Each Individual Station")
+obs_fig1.update_traces(marker={'size': 8})
+obs_fig1.add_scattermapbox(lat=[37.86119], lon=[-122.24233], 
+                     hovertemplate = 'SOURCE',
+                     marker_size = 15,
+                     marker_color = 'pink',
+                     showlegend = False
+                     )
+obs_fig1.show()
+
+# +
+fig2 = px.scatter_mapbox(dff, lat='lat', lon='lon', color='Duration', mapbox_style='stamen-terrain', hover_name='Station', color_continuous_scale = 
+                'rainbow', range_color=(0, 150), title="{SW4} Duration of Earthquake at Each Individual Station")
 fig2.update_traces(marker={'size': 8})
 fig2.add_scattermapbox(lat=[37.86119], lon=[-122.24233], 
                      hovertemplate = 'SOURCE',
@@ -737,8 +789,8 @@ fig2.add_scattermapbox(lat=[37.86119], lon=[-122.24233],
                      )
 fig2.show()
 
-obs_fig2 = px.scatter_mapbox(df_sw4_band_passed, lat='lat', lon='lon', color='Duration', mapbox_style='stamen-terrain', hover_name='Station', color_continuous_scale = 
-                'rainbow', range_color=(0, 200), title="{OBSERVED} Duration of Earthquake (Using 3D Vector Data) at Each Individual Station")
+obs_fig2 = px.scatter_mapbox(obs_dff, lat='lat', lon='lon', color='Duration', mapbox_style='stamen-terrain', hover_name='Station', color_continuous_scale = 
+                'rainbow', range_color=(0, 150), title="{OBSERVED} Duration of Earthquake at Each Individual Station")
 obs_fig2.update_traces(marker={'size': 8})
 obs_fig2.add_scattermapbox(lat=[37.86119], lon=[-122.24233], 
                      hovertemplate = 'SOURCE',
@@ -748,5 +800,22 @@ obs_fig2.add_scattermapbox(lat=[37.86119], lon=[-122.24233],
                      )
 obs_fig2.show()
 # -
+
+plot_peak_ratio(dff, obs_dff, 'Absolute Peak')
+
+compare(['NP.1854.HN.u', dff], ['NP.1854.HN.u', obs_dff], [0, 0.5])
+
+
+# # END
+#
+
+def add_new_columns(df, is_sw4=False):
+
+    peak_df = df[["Peak"]].copy()
+    new_df = (peak_df-peak_df.min()) / (peak_df.max()-peak_df.min())
+    new_df2 = (peak_df-peak_df.mean())/peak_df.std()
+    df['Peak 0-1'] = new_df
+    df['Peak z-score'] = new_df2
+    return df
 
 
