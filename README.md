@@ -9,3 +9,10 @@ Command line: jupytext --to py notebook.ipynb
 
 ### Convert notebook.py to an .ipynb file with no outputs
 Command line: jupytext --to notebook notebook.py
+
+\
+&nbsp;
+\
+&nbsp;
+
+![poster](poster.jpg)
