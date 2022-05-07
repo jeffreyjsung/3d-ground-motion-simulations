@@ -21,6 +21,8 @@ import matplotlib.pyplot as plt
 import plotly.express as px
 from geopy import distance
 from scipy.fft import fft, ifft, fftfreq
+import math
+import seaborn as sns
 
 # # Data Cleaning
 
@@ -120,7 +122,7 @@ east_west.reset_index(inplace=True, drop=True)
 obs_east_west.reset_index(inplace=True, drop=True)
 # only .n
 north_south = sw4_df.iloc[1::3, :]
-obs_east_west = obs_df[obs_df['Point'].str.contains(r'.n')]
+obs_north_south = obs_df[obs_df['Point'].str.contains(r'.n')]
 north_south = north_south[north_south['Point'].isin(obs_north_south['Point'])]
 north_south.reset_index(inplace=True, drop=True)
 obs_north_south.reset_index(inplace=True, drop=True)
@@ -347,6 +349,89 @@ sw4_df_3d = sw4_df_3d[sw4_df_3d['Point'].isin(obs_df_3d['Point'])]
 obs_df_3d = obs_df_3d[obs_df_3d['Point'].isin(sw4_df_3d['Point'])]
 sw4_df_3d.reset_index(inplace=True, drop=True)
 obs_df_3d.reset_index(inplace=True, drop=True)
+
+
+# +
+#SEPERATE REGION :)
+
+def calculate_theta(row):
+    lat1 = math.radians(37.86119) #SOURCE
+    long1 = math.radians(-122.24233)
+    lat2 = math.radians(row['lat'])
+    long2 = math.radians(row['lon'])
+    long = long2-long1
+    X = math.sin(long)*math.cos(lat2)
+    Y = (math.cos(lat1)*math.sin(lat2)) - (math.sin(lat1)*math.cos(lat2)*math.cos(long))
+    theta = math.degrees(math.atan2(X,Y))
+    return theta
+
+
+# -
+
+sw4_df_3d['Bearing Angle'] = sw4_df_3d.apply(lambda row: calculate_theta(row), axis = 1)
+obs_df_3d['Bearing Angle'] = obs_df_3d.apply(lambda row: calculate_theta(row), axis = 1)
+
+# +
+#Angles are rough estimates --> find more accurate relationship between hayward fault and source 
+eastside = sw4_df_3d[(sw4_df_3d['Bearing Angle'] > 0) & 
+                               (sw4_df_3d['Bearing Angle'] < 146)]
+eastside2 = sw4_df_3d[(sw4_df_3d['Bearing Angle'] < 0) &
+                                (sw4_df_3d['Bearing Angle'] > -45)]
+
+EAST = [eastside, eastside2]
+  
+east_hayward = pd.concat(EAST)
+east_hayward['Region'] = 'East'
+
+westside = sw4_df_3d[(sw4_df_3d['Bearing Angle'] > 146)]
+westside2 = sw4_df_3d[(sw4_df_3d['Bearing Angle'] < -45) &
+                                (sw4_df_3d['Bearing Angle'] > -180)]
+WEST = [westside, westside2]
+west_hayward = pd.concat(WEST)
+west_hayward['Region'] = 'West'
+
+frames = [east_hayward, west_hayward]
+
+sw4_df_3d = pd.concat(frames)
+
+# +
+#Angles are rough estimates --> find more accurate relationship between hayward fault and source 
+eastside = obs_df_3d[(obs_df_3d['Bearing Angle'] > 0) & 
+                               (obs_df_3d['Bearing Angle'] < 146)]
+eastside2 = obs_df_3d[(obs_df_3d['Bearing Angle'] < 0) &
+                                (obs_df_3d['Bearing Angle'] > -45)]
+
+EAST = [eastside, eastside2]
+  
+east_hayward = pd.concat(EAST)
+east_hayward['Region'] = 'East'
+
+westside = obs_df_3d[(obs_df_3d['Bearing Angle'] > 146)]
+westside2 = obs_df_3d[(obs_df_3d['Bearing Angle'] < -45) &
+                                (obs_df_3d['Bearing Angle'] > -180)]
+WEST = [westside, westside2]
+west_hayward = pd.concat(WEST)
+west_hayward['Region'] = 'West'
+
+frames = [east_hayward, west_hayward]
+
+obs_df_3d = pd.concat(frames)
+# -
+
+#Visualize our estimate of the East and West sides of Hayward Fault 
+fig_u = px.scatter_mapbox(sw4_df_3d, lat='lat', lon='lon', color='Region', hover_name='Station', 
+                         mapbox_style='stamen-terrain', color_continuous_scale = 
+                        [(0, "blue"), (0.5, "yellow")], 
+                         title="Stations Seperated into the East and West of Hayward Fault")
+fig_u.update_traces(marker={'size': 8})
+fig_u.add_scattermapbox(lat=[37.86119], lon=[-122.24233], 
+      
+                     hovertemplate = 'SOURCE',
+                     marker_size = 15,
+                     marker_color = 'pink',
+                     showlegend = False
+                     )
+fig_u.show()
 
 # +
 fig1 = px.scatter_mapbox(sw4_df_3d, lat='lat', lon='lon', color='Peak', hover_name='Station', 
@@ -621,6 +706,36 @@ fig2.add_scattermapbox(lat=[37.86119], lon=[-122.24233],
                      )
 fig2.show()
 
+obs_df_3d_bp = create_df_3d(obs_directory, True, [0.2, 0.5])
+
+obs_df_3d_bp1 = create_df_3d(obs_directory, True, [0.5, 1])
+
+fig1 = px.scatter_mapbox(obs_df_3d_bp, lat='lat', lon='lon', color='Peak', hover_name='Station', 
+                         mapbox_style='stamen-terrain', color_continuous_scale = 
+                        'rainbow', range_color=(0, 0.002),
+                         title="{OBSERVED} Peak Amplitude (Using Band-Passed [0.2-0.5] 3D Vector Data) at Each Individual Station")
+fig1.update_traces(marker={'size': 8})
+fig1.add_scattermapbox(lat=[37.86119], lon=[-122.24233], 
+                     hovertemplate = 'SOURCE',
+                     marker_size = 15,
+                     marker_color = 'pink',
+                     showlegend = False
+                     )
+fig1.show()
+
+fig2 = px.scatter_mapbox(obs_df_3d_bp1, lat='lat', lon='lon', color='Peak', hover_name='Station', 
+                         mapbox_style='stamen-terrain', color_continuous_scale = 
+                        'rainbow', range_color=(0, 0.002),
+                         title="{OBSERVED} Peak Amplitude (Using Band-Passed [0.5-1.0] 3D Vector Data) at Each Individual Station")
+fig2.update_traces(marker={'size': 8})
+fig2.add_scattermapbox(lat=[37.86119], lon=[-122.24233], 
+                     hovertemplate = 'SOURCE',
+                     marker_size = 15,
+                     marker_color = 'pink',
+                     showlegend = False
+                     )
+fig2.show()
+
 
 # # Playing with Different Scales
 
@@ -754,7 +869,7 @@ obs_dff = obs_up_down
 fig1 = px.scatter_mapbox(dff, lat='lat', lon='lon', color='Absolute Peak', hover_name='Station', 
                          mapbox_style='stamen-terrain', color_continuous_scale = 
                         'rainbow', range_color=(0, 0.000001 *140),
-                         title="{SW4} Peak Amplitude at Each Individual Station")
+                         title="{SW4} Peak Amplitude at Each Individual Station (Up-Down)")
 fig1.update_traces(marker={'size': 8})
 fig1.add_scattermapbox(lat=[37.86119], lon=[-122.24233], 
                      hovertemplate = 'SOURCE',
@@ -767,7 +882,7 @@ fig1.show()
 obs_fig1 = px.scatter_mapbox(obs_dff, lat='lat', lon='lon', color='Absolute Peak', hover_name='Station', 
                          mapbox_style='stamen-terrain', color_continuous_scale = 
                         'rainbow', range_color=(0, 0.000001 *140),
-                         title="{OBSERVED} Peak Amplitude at Each Individual Station")
+                         title="{OBSERVED} Peak Amplitude at Each Individual Station (Up-Down)")
 obs_fig1.update_traces(marker={'size': 8})
 obs_fig1.add_scattermapbox(lat=[37.86119], lon=[-122.24233], 
                      hovertemplate = 'SOURCE',
@@ -805,17 +920,5 @@ plot_peak_ratio(dff, obs_dff, 'Absolute Peak')
 
 compare(['NP.1854.HN.u', dff], ['NP.1854.HN.u', obs_dff], [0, 0.5])
 
-
 # # END
 #
-
-def add_new_columns(df, is_sw4=False):
-
-    peak_df = df[["Peak"]].copy()
-    new_df = (peak_df-peak_df.min()) / (peak_df.max()-peak_df.min())
-    new_df2 = (peak_df-peak_df.mean())/peak_df.std()
-    df['Peak 0-1'] = new_df
-    df['Peak z-score'] = new_df2
-    return df
-
-
